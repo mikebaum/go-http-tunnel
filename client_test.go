@@ -7,7 +7,8 @@ package tunnel
 import (
 	"crypto/tls"
 	"errors"
-	"net"
+    "github.com/mmatczuk/go-http-tunnel/keepalive"
+    "net"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -30,6 +31,11 @@ func TestClient_Dial(t *testing.T) {
 		},
 		Tunnels: map[string]*proto.Tunnel{"test": {}},
 		Proxy:   Proxy(ProxyFuncs{}),
+		KeepAlive: &keepalive.KeepAlive{
+			KeepAliveIdleTime: keepalive.DefaultKeepAliveIdleTime,
+			KeepAliveCount:    keepalive.DefaultKeepAliveCount,
+			KeepAliveInterval: keepalive.DefaultKeepAliveInterval,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -68,6 +74,11 @@ func TestClient_DialBackoff(t *testing.T) {
 		Backoff:         b,
 		Tunnels:         map[string]*proto.Tunnel{"test": {}},
 		Proxy:           Proxy(ProxyFuncs{}),
+		KeepAlive: &keepalive.KeepAlive{
+			KeepAliveIdleTime: keepalive.DefaultKeepAliveIdleTime,
+			KeepAliveCount:    keepalive.DefaultKeepAliveCount,
+			KeepAliveInterval: keepalive.DefaultKeepAliveInterval,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

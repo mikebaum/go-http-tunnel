@@ -173,6 +173,13 @@ Configuration options:
     * `multiplier`: interval multiplier if reconnect failed, *default:* `1.5`
     * `max_interval`: maximal time client would wait before redialing the server, *default:* `1m`
     * `max_time`: maximal time client would try to reconnect to the server if connection was lost, set `0` to never stop trying, *default:* `15m`
+* `keep_alive`**
+    * `idle_time`: how long to wait on an idle tcp connection before sending a keepalive packet, *default:* `15 min`
+    * `count`: how many keepalive packets to send before declaring that the tcp connection is down, *default:* `8`
+    * `interval`: the amount of time to wait between sending consequent keepalive packets, *default:* `5 sec`
+
+\** Keep alive configuration not available for window since on windows it can only be either on or off.
+It is defaulted to on and cannot be turned off via configuration.
 
 ## How it works
 

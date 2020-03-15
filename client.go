@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mmatczuk/go-http-tunnel/keepalive"
 	"net"
 	"net/http"
 	"sync"
@@ -40,6 +41,8 @@ type ClientConfig struct {
 	Proxy ProxyFunc
 	// Logger is optional logger. If nil logging is disabled.
 	Logger log.Logger
+	// Used to configure the tcp keepalive for the client -> server tcp connection
+	KeepAlive *keepalive.KeepAlive
 }
 
 // Client is responsible for creating connection to the server, handling control
@@ -172,7 +175,11 @@ func (c *Client) dial() (net.Conn, error) {
 			conn, err = d.Dial(network, addr)
 
 			if err == nil {
-				err = keepAlive(conn)
+				c.logger.Log(
+					"level", 1,
+					"msg", fmt.Sprintf("Setting up keep alive using config: %v", c.config.KeepAlive.String()),
+				)
+				err = c.config.KeepAlive.Set(conn)
 			}
 			if err == nil {
 				conn = tls.Client(conn, tlsConfig)

@@ -8,13 +8,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
 	"sort"
-
-	"gopkg.in/yaml.v2"
 
 	"github.com/cenkalti/backoff"
 	"github.com/mmatczuk/go-http-tunnel"
@@ -95,6 +94,11 @@ func main() {
 	}
 	logger.Log("config", string(b))
 
+	keepAlive, err := config.KeepAliveConfig.Parse()
+	if err != nil {
+		fatal("failed to parse KeepAliveConfig: %s", err)
+	}
+
 	client, err := tunnel.NewClient(&tunnel.ClientConfig{
 		ServerAddr:      config.ServerAddr,
 		TLSClientConfig: tlsconf,
@@ -102,6 +106,7 @@ func main() {
 		Tunnels:         tunnels(config.Tunnels),
 		Proxy:           proxy(config.Tunnels, logger),
 		Logger:          logger,
+		KeepAlive:       keepAlive,
 	})
 	if err != nil {
 		fatal("failed to create client: %s", err)
