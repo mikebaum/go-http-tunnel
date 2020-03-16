@@ -53,10 +53,12 @@ type Server struct {
 	config *ServerConfig
 
 	listener   net.Listener
+	hlthChk    net.Listener
 	connPool   *connPool
 	httpClient *http.Client
 	logger     log.Logger
 	vhostMuxer *vhost.TLSMuxer
+	shutdown   chan struct{}
 }
 
 // NewServer creates a new Server.
@@ -76,6 +78,7 @@ func NewServer(config *ServerConfig) (*Server, error) {
 		config:   config,
 		listener: listener,
 		logger:   logger,
+		shutdown: make(chan struct{}, 1),
 	}
 
 	t := &http2.Transport{}
@@ -190,6 +193,18 @@ func (s *Server) Start() {
 		"addr", addr,
 	)
 
+	if s.config.HealthCheckAddr != "" {
+		err := s.startHeathCheckListener()
+		if err != nil {
+			s.logger.Log(
+				"level", 0,
+				"msg", "could not start health check listener, stopping server",
+				"err", err,
+			)
+			return
+		}
+	}
+
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -199,6 +214,8 @@ func (s *Server) Start() {
 					"action", "control connection listener closed",
 					"addr", addr,
 				)
+				s.shutdown <- struct{}{}
+				s.hlthChk.Close()
 				return
 			}
 
@@ -227,6 +244,67 @@ func (s *Server) Start() {
 
 		go s.handleClient(tls.Server(conn, s.config.TLSConfig))
 	}
+}
+
+func (s *Server) startHeathCheckListener() error  {
+	addr := ":5224"
+
+	err := s.createHealthCheckListener(addr)
+	if err != nil {
+		return  fmt.Errorf("failed to start health check listener on address: %s, error: %s", ":5224", err)
+	}
+	go s.listenForHealthChecks(addr)
+
+	return nil
+}
+
+func (s *Server) createHealthCheckListener(addr string) error {
+	s.logger.Log(
+		"level", 1,
+		"action", "start health check listener",
+		"addr", addr,
+	)
+
+	listener, err := net.Listen("tcp", s.config.HealthCheckAddr)
+	if err != nil {
+		return err
+	}
+
+	s.hlthChk = listener
+	return nil
+}
+
+func (s *Server) listenForHealthChecks(addr string) {
+	for {
+		conn, err := s.hlthChk.Accept()
+		if err != nil {
+			s.logger.Log(
+				"level", 0,
+				"msg", "Health check connection failed",
+				"addr", addr,
+				"err", err,
+			)
+
+			select {
+			case <-s.shutdown:
+				break
+			default:
+				continue
+			}
+		}
+
+		go handleHealthCheck(conn, s.logger)
+	}
+}
+
+func handleHealthCheck(conn net.Conn, logger log.Logger) {
+	defer conn.Close()
+
+	logger.Log(
+		"level", 3,
+		"action", "handle health check",
+		"remoteAddr", conn.RemoteAddr(),
+	)
 }
 
 func (s *Server) handleClient(conn net.Conn) {
