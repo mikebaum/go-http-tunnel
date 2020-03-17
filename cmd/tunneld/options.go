@@ -39,45 +39,48 @@ func init() {
 
 // options specify arguments read command line arguments.
 type options struct {
-	httpAddr   string
-	httpsAddr  string
-	tunnelAddr string
-	sniAddr    string
-	tlsCrt     string
-	tlsKey     string
-	rootCA     string
-	clients    string
-	logLevel   int
-	version    bool
-	keepAlive  *keepalive.Config
+	httpAddr    string
+	httpsAddr   string
+	tunnelAddr  string
+	sniAddr     string
+	tlsCrt      string
+	tlsKey      string
+	rootCA      string
+	clients     string
+	logLevel    int
+	version     bool
+	keepAlive   *keepalive.Config
+	hlthChkAddr string
 }
 
 func parseArgs() *options {
 
 	httpAddr := flag.String("httpAddr", ":80", "Public address for HTTP connections, empty string to disable")
-	httpsAddr := flag.String("httpsAddr", ":443", "Public address listening for HTTPS connections, emptry string to disable")
+	httpsAddr := flag.String("httpsAddr", ":443", "Public address listening for HTTPS connections, empty string to disable")
 	tunnelAddr := flag.String("tunnelAddr", ":5223", "Public address listening for tunnel client")
 	sniAddr := flag.String("sniAddr", "", "Public address listening for TLS SNI connections, empty string to disable")
 	tlsCrt := flag.String("tlsCrt", "server.crt", "Path to a TLS certificate file")
 	tlsKey := flag.String("tlsKey", "server.key", "Path to a TLS key file")
-	rootCA := flag.String("rootCA", "", "Path to the trusted certificate chian used for client certificate authentication, if empty any client certificate is accepted")
+	rootCA := flag.String("rootCA", "", "Path to the trusted certificate chain used for client certificate authentication, if empty any client certificate is accepted")
 	clients := flag.String("clients", "", "Comma-separated list of tunnel client ids, if empty accept all clients")
 	logLevel := flag.Int("log-level", 1, "Level of messages to log, 0-3")
 	version := flag.Bool("version", false, "Prints tunneld version")
 	keepAlive := keepalive.AddKeepAliveFlag()
+	hlthChkAddr := flag.String("hlthChkAddr", "", "Public address to use for health check probes, if empty no health check listener will be started.")
 	flag.Parse()
 
 	return &options{
-		httpAddr:   *httpAddr,
-		httpsAddr:  *httpsAddr,
-		tunnelAddr: *tunnelAddr,
-		sniAddr:    *sniAddr,
-		tlsCrt:     *tlsCrt,
-		tlsKey:     *tlsKey,
-		rootCA:     *rootCA,
-		clients:    *clients,
-		logLevel:   *logLevel,
-		version:    *version,
-		keepAlive:  keepAlive,
+		httpAddr:    *httpAddr,
+		httpsAddr:   *httpsAddr,
+		tunnelAddr:  *tunnelAddr,
+		sniAddr:     *sniAddr,
+		tlsCrt:      *tlsCrt,
+		tlsKey:      *tlsKey,
+		rootCA:      *rootCA,
+		clients:     *clients,
+		logLevel:    *logLevel,
+		version:     *version,
+		keepAlive:   keepAlive,
+		hlthChkAddr: *hlthChkAddr,
 	}
 }

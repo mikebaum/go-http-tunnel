@@ -44,6 +44,8 @@ type ServerConfig struct {
 	SNIAddr string
 	// Used to configure the keepalive for the client -> server tcp connection
 	KeepAlive *keepalive.KeepAlive
+	// The address to use for the health check listener. If empty no health check listener will be created.
+	HealthCheckAddr string
 }
 
 // Server is responsible for proxying public connections to the client over a
@@ -247,22 +249,21 @@ func (s *Server) Start() {
 }
 
 func (s *Server) startHeathCheckListener() error  {
-	addr := ":5224"
 
-	err := s.createHealthCheckListener(addr)
+	err := s.createHealthCheckListener()
 	if err != nil {
-		return  fmt.Errorf("failed to start health check listener on address: %s, error: %s", ":5224", err)
+		return  fmt.Errorf("failed to start health check listener on address: %s, error: %s", s.config.HealthCheckAddr, err)
 	}
-	go s.listenForHealthChecks(addr)
+	go s.listenForHealthChecks()
 
 	return nil
 }
 
-func (s *Server) createHealthCheckListener(addr string) error {
+func (s *Server) createHealthCheckListener() error {
 	s.logger.Log(
 		"level", 1,
 		"action", "start health check listener",
-		"addr", addr,
+		"addr", s.config.HealthCheckAddr,
 	)
 
 	listener, err := net.Listen("tcp", s.config.HealthCheckAddr)
@@ -274,14 +275,14 @@ func (s *Server) createHealthCheckListener(addr string) error {
 	return nil
 }
 
-func (s *Server) listenForHealthChecks(addr string) {
+func (s *Server) listenForHealthChecks() {
 	for {
 		conn, err := s.hlthChk.Accept()
 		if err != nil {
 			s.logger.Log(
 				"level", 0,
 				"msg", "Health check connection failed",
-				"addr", addr,
+				"addr", s.config.HealthCheckAddr,
 				"err", err,
 			)
 
