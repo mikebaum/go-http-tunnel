@@ -10,7 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+    "github.com/mmatczuk/go-http-tunnel/keepalive"
+    "io"
 	"net"
 	"net/http"
 	"strings"
@@ -41,6 +42,8 @@ type ServerConfig struct {
 	Logger log.Logger
 	// Addr is TCP address to listen for TLS SNI connections
 	SNIAddr string
+	// Used to configure the keepalive for the client -> server tcp connection
+	KeepAlive *keepalive.KeepAlive
 }
 
 // Server is responsible for proxying public connections to the client over a
@@ -208,7 +211,12 @@ func (s *Server) Start() {
 			continue
 		}
 
-		if err := keepAlive(conn); err != nil {
+		s.logger.Log(
+			"level", 2,
+			"msg", fmt.Sprintf("Setting up keep alive using config: %v", s.config.KeepAlive.String()),
+		)
+
+		if err := s.config.KeepAlive.Set(conn); err != nil {
 			s.logger.Log(
 				"level", 0,
 				"msg", "TCP keepalive for control connection failed",
@@ -528,13 +536,19 @@ func (s *Server) listen(l net.Listener, identifier id.ID) {
 		}
 
 		tlsConn, ok := conn.(*vhost.TLSConn)
+
+		s.logger.Log(
+			"level", 1,
+			"msg", fmt.Sprintf("Setting up keep alive using config: %v", s.config.KeepAlive.String()),
+		)
+
 		if ok {
 			msg.ForwardedHost = tlsConn.Host()
-			err = keepAlive(tlsConn.Conn)
+			err = s.config.KeepAlive.Set(tlsConn.Conn)
 
 		} else {
 			msg.ForwardedHost = l.Addr().String()
-			err = keepAlive(conn)
+			err = s.config.KeepAlive.Set(conn)
 		}
 
 		if err != nil {

@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/mmatczuk/go-http-tunnel/keepalive"
 	"io/ioutil"
 	"path/filepath"
 	"time"
@@ -42,12 +43,13 @@ type Tunnel struct {
 
 // ClientConfig is a tunnel client configuration.
 type ClientConfig struct {
-	ServerAddr string             `yaml:"server_addr"`
-	TLSCrt     string             `yaml:"tls_crt"`
-	TLSKey     string             `yaml:"tls_key"`
-	RootCA     string             `yaml:"root_ca"`
-	Backoff    BackoffConfig      `yaml:"backoff"`
-	Tunnels    map[string]*Tunnel `yaml:"tunnels"`
+	ServerAddr      string             `yaml:"server_addr"`
+	TLSCrt          string             `yaml:"tls_crt"`
+	TLSKey          string             `yaml:"tls_key"`
+	RootCA          string             `yaml:"root_ca"`
+	Backoff         BackoffConfig      `yaml:"backoff"`
+	Tunnels         map[string]*Tunnel `yaml:"tunnels"`
+	KeepAliveConfig *keepalive.Config  `yaml:"keep_alive"`
 }
 
 func loadClientConfigFromFile(file string) (*ClientConfig, error) {
@@ -65,6 +67,7 @@ func loadClientConfigFromFile(file string) (*ClientConfig, error) {
 			MaxInterval: DefaultBackoffMaxInterval,
 			MaxTime:     DefaultBackoffMaxTime,
 		},
+		KeepAliveConfig: keepalive.NewDefaultConfig(),
 	}
 
 	if err = yaml.Unmarshal(buf, &c); err != nil {

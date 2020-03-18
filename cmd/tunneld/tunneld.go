@@ -8,12 +8,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"golang.org/x/net/http2"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
-
-	"golang.org/x/net/http2"
 
 	"github.com/mmatczuk/go-http-tunnel"
 	"github.com/mmatczuk/go-http-tunnel/id"
@@ -39,6 +38,11 @@ func main() {
 
 	autoSubscribe := opts.clients == ""
 
+	keepAlive, err := opts.keepAlive.Parse()
+	if err != nil {
+		fatal("failed to parse KeepAliveConfig: %s", err)
+	}
+
 	// setup server
 	server, err := tunnel.NewServer(&tunnel.ServerConfig{
 		Addr:          opts.tunnelAddr,
@@ -46,6 +50,7 @@ func main() {
 		AutoSubscribe: autoSubscribe,
 		TLSConfig:     tlsconf,
 		Logger:        logger,
+		KeepAlive:     keepAlive,
 	})
 	if err != nil {
 		fatal("failed to create server: %s", err)

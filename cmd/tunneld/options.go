@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/mmatczuk/go-http-tunnel/keepalive"
 	"os"
 )
 
@@ -48,9 +49,11 @@ type options struct {
 	clients    string
 	logLevel   int
 	version    bool
+	keepAlive  *keepalive.Config
 }
 
 func parseArgs() *options {
+
 	httpAddr := flag.String("httpAddr", ":80", "Public address for HTTP connections, empty string to disable")
 	httpsAddr := flag.String("httpsAddr", ":443", "Public address listening for HTTPS connections, emptry string to disable")
 	tunnelAddr := flag.String("tunnelAddr", ":5223", "Public address listening for tunnel client")
@@ -61,6 +64,7 @@ func parseArgs() *options {
 	clients := flag.String("clients", "", "Comma-separated list of tunnel client ids, if empty accept all clients")
 	logLevel := flag.Int("log-level", 1, "Level of messages to log, 0-3")
 	version := flag.Bool("version", false, "Prints tunneld version")
+	keepAlive := keepalive.AddKeepAliveFlag()
 	flag.Parse()
 
 	return &options{
@@ -74,5 +78,6 @@ func parseArgs() *options {
 		clients:    *clients,
 		logLevel:   *logLevel,
 		version:    *version,
+		keepAlive:  keepAlive,
 	}
 }

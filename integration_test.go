@@ -8,7 +8,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io"
+    "github.com/mmatczuk/go-http-tunnel/keepalive"
+    "io"
 	"io/ioutil"
 	"math/rand"
 	"net"
@@ -95,6 +96,11 @@ func makeTunnelServer(t testing.TB) *tunnel.Server {
 		AutoSubscribe: true,
 		TLSConfig:     tlsConfig(),
 		Logger:        log.NewStdLogger(),
+		KeepAlive: &keepalive.KeepAlive{
+			KeepAliveIdleTime: keepalive.DefaultKeepAliveIdleTime,
+			KeepAliveCount:    keepalive.DefaultKeepAliveCount,
+			KeepAliveInterval: keepalive.DefaultKeepAliveInterval,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -137,6 +143,11 @@ func makeTunnelClient(t testing.TB, serverAddr string, httpLocalAddr, httpAddr, 
 			TCP:  tcpProxy.Proxy,
 		}),
 		Logger: log.NewStdLogger(),
+		KeepAlive: &keepalive.KeepAlive{
+			KeepAliveIdleTime: keepalive.DefaultKeepAliveIdleTime,
+			KeepAliveCount:    keepalive.DefaultKeepAliveCount,
+			KeepAliveInterval: keepalive.DefaultKeepAliveInterval,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)
