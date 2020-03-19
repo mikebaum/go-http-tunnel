@@ -418,14 +418,32 @@ func (s *Server) addTunnels(tunnels map[string]*proto.Tunnel, identifier id.ID) 
 		Hosts:     []*HostAuth{},
 		Listeners: []net.Listener{},
 	}
-
+	f := make(map[net.Listener]string)
 	var err error
 	for name, t := range tunnels {
 		switch t.Protocol {
 		case proto.HTTP:
 			i.Hosts = append(i.Hosts, &HostAuth{t.Host, NewAuth(t.Auth)})
+		case proto.HTTPCONNECT:
+			var l net.Listener
+
+			l, err = net.Listen(proto.TCP, t.Addr)
+			if err != nil {
+				goto rollback
+			}
+
+			s.logger.Log(
+				"level", 2,
+				"action", "open listener",
+				"identifier", identifier,
+				"addr", l.Addr(),
+			)
+
+			i.Listeners = append(i.Listeners, l)
+			f[l] = proto.HTTPCONNECT
 		case proto.TCP, proto.TCP4, proto.TCP6, proto.UNIX:
 			var l net.Listener
+
 			l, err = net.Listen(t.Protocol, t.Addr)
 			if err != nil {
 				goto rollback
@@ -439,6 +457,7 @@ func (s *Server) addTunnels(tunnels map[string]*proto.Tunnel, identifier id.ID) 
 			)
 
 			i.Listeners = append(i.Listeners, l)
+
 		case proto.SNI:
 			if s.vhostMuxer == nil {
 				err = fmt.Errorf("unable to configure SNI for tunnel %s: %s", name, t.Protocol)
@@ -458,6 +477,7 @@ func (s *Server) addTunnels(tunnels map[string]*proto.Tunnel, identifier id.ID) 
 			)
 
 			i.Listeners = append(i.Listeners, l)
+
 		default:
 			err = fmt.Errorf("unsupported protocol for tunnel %s: %s", name, t.Protocol)
 			goto rollback
@@ -470,9 +490,14 @@ func (s *Server) addTunnels(tunnels map[string]*proto.Tunnel, identifier id.ID) 
 	}
 
 	for _, l := range i.Listeners {
-		go s.listen(l, identifier)
-	}
+		p, ok := f[l]
+		if ok {
+			go s.listenExt(l, identifier, p)
+		} else {
+			go s.listen(l, identifier)
+		}
 
+	}
 	return nil
 
 rollback:
@@ -496,6 +521,10 @@ func (s *Server) Ping(identifier id.ID) (time.Duration, error) {
 }
 
 func (s *Server) listen(l net.Listener, identifier id.ID) {
+	s.listenExt(l, identifier, l.Addr().Network())
+}
+
+func (s *Server) listenExt(l net.Listener, identifier id.ID, fp string) {
 	addr := l.Addr().String()
 
 	for {
@@ -524,7 +553,7 @@ func (s *Server) listen(l net.Listener, identifier id.ID) {
 
 		msg := &proto.ControlMessage{
 			Action:         proto.ActionProxy,
-			ForwardedProto: l.Addr().Network(),
+			ForwardedProto: fp, //,
 		}
 
 		tlsConn, ok := conn.(*vhost.TLSConn)
