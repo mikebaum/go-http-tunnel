@@ -33,6 +33,8 @@ const (
 	TCP6 = "tcp6"
 	UNIX = "unix"
 	SNI  = "sni"
+
+	HTTPCONNECT = "httpconnect"
 )
 
 // ControlMessage is sent from server to client before streaming data. It's
