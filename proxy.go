@@ -20,6 +20,8 @@ type ProxyFuncs struct {
 	HTTP ProxyFunc
 	// TCP is custom implementation of TCP proxing.
 	TCP ProxyFunc
+	// this enables http tunneling
+	HTTPCONNECT ProxyFunc
 }
 
 // Proxy returns a ProxyFunc that uses custom function if provided.
@@ -31,6 +33,8 @@ func Proxy(p ProxyFuncs) ProxyFunc {
 			f = p.HTTP
 		case proto.TCP, proto.TCP4, proto.TCP6, proto.UNIX:
 			f = p.TCP
+		case proto.HTTPCONNECT:
+			f = p.HTTPCONNECT
 		}
 
 		if f == nil {

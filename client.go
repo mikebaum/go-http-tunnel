@@ -262,6 +262,7 @@ func (c *Client) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		"action", "handle",
 		"ctrlMsg", msg,
 	)
+
 	switch msg.Action {
 	case proto.ActionProxy:
 		c.config.Proxy(w, r.Body, msg)

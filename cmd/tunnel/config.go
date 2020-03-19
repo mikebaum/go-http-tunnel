@@ -91,6 +91,10 @@ func loadClientConfigFromFile(file string) (*ClientConfig, error) {
 			if err := validateTCP(t); err != nil {
 				return nil, fmt.Errorf("%s %s", name, err)
 			}
+		case proto.HTTPCONNECT:
+			if err := validateHttpConnect(t); err != nil {
+				return nil, fmt.Errorf("%s %s", name, err)
+			}
 		case proto.SNI:
 			if err := validateSNI(t); err != nil {
 				return nil, fmt.Errorf("%s %s", name, err)
@@ -138,6 +142,26 @@ func validateTCP(t *Tunnel) error {
 
 	// unexpected
 
+	if t.Host != "" {
+		return fmt.Errorf("host: unexpected")
+	}
+	if t.Auth != "" {
+		return fmt.Errorf("auth: unexpected")
+	}
+
+	return nil
+}
+
+func validateHttpConnect(t *Tunnel) error {
+	var err error
+	if t.RemoteAddr, err = normalizeAddress(t.RemoteAddr); err != nil {
+		return fmt.Errorf("remote_addr: %s", err)
+	}
+
+	// unexpected
+	if t.Addr != "" {
+		return fmt.Errorf("addr: unexpected")
+	}
 	if t.Host != "" {
 		return fmt.Errorf("host: unexpected")
 	}
