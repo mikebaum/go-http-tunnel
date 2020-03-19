@@ -3,7 +3,6 @@ package tunnel
 import (
 	"bufio"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -117,7 +116,6 @@ func (p *ForwardingProxy) ServeHTTP(w http.ResponseWriter, r *http.Request, rr i
 	if p.AuthUser != "" && p.AuthPass != "" {
 		user, pass, ok := parseBasicProxyAuth(r.Header.Get("Proxy-Authorization"))
 		if !ok || user != p.AuthUser || pass != p.AuthPass {
-			//p.Logger.Warn("Authorization attempt with invalid credentials")
 			http.Error(w, http.StatusText(http.StatusProxyAuthRequired), http.StatusProxyAuthRequired)
 			return
 		}
@@ -131,16 +129,12 @@ func (p *ForwardingProxy) ServeHTTP(w http.ResponseWriter, r *http.Request, rr i
 
 func (p *ForwardingProxy) handleTunneling(w http.ResponseWriter, r *http.Request, rr io.ReadCloser) {
 	if r.Method != http.MethodConnect {
-		//p.Logger.Info("Method not allowed", zap.String("method", r.Method))
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
 
-	//p.Logger.Debug("Connecting", zap.String("host", r.Host))
-
 	destConn, err := net.DialTimeout("tcp", r.Host, p.DestDialTimeout)
 	if err != nil {
-		//p.Logger.Error("Destination dial failed", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
@@ -149,9 +143,6 @@ func (p *ForwardingProxy) handleTunneling(w http.ResponseWriter, r *http.Request
 	destConn.SetReadDeadline(now.Add(p.DestReadTimeout))
 	destConn.SetWriteDeadline(now.Add(p.DestWriteTimeout))
 
-	//p.Logger.Debug("Connected", zap.String("host", r.Host))
-	fmt.Println("Connected to host", r.Host)
-
 	resp := http.Response{}
 	resp.StatusCode = 200
 	resp.Proto = "HTTP/1.1"
@@ -159,15 +150,11 @@ func (p *ForwardingProxy) handleTunneling(w http.ResponseWriter, r *http.Request
 	resp.ProtoMinor = 1
 
 	resp.Write(w)
-
 	w.(http.Flusher).Flush()
-
-	fmt.Println("Flushed to host", r.Host)
 
 	done := make(chan struct{})
 	go func() {
 		transfer(flushWriter{w}, destConn, log.NewContext(p.logger).With(
-			// "dst", msg.ForwardedHost,
 			"src", r.Host,
 		))
 		close(done)
@@ -175,12 +162,10 @@ func (p *ForwardingProxy) handleTunneling(w http.ResponseWriter, r *http.Request
 
 	transfer(destConn, rr, log.NewContext(p.logger).With(
 		"dst", r.Host,
-		// "src", msg.ForwardedHost,
 	))
 
 	<-done
 
-	fmt.Println("Done for", r.Host)
 	destConn.Close()
 	rr.Close()
 }
