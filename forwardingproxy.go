@@ -17,15 +17,7 @@ import (
 // ForwardingProxy uses http tunnel.
 type ForwardingProxy struct {
 	// localAddr specifies default TCP address of the local server.
-	localAddr string
-	// localAddrMap specifies mapping from ControlMessage.ForwardedHost to
-	// local server address, keys may contain host and port, only host or
-	// only port. The order of precedence is the following
-	// * host and port
-	// * port
-	// * host
-	localAddrMap map[string]string
-	// logger is the proxy logger.
+	localAddr           string
 	logger              log.Logger
 	AuthUser            string
 	AuthPass            string
@@ -52,17 +44,21 @@ func NewForwardingProxy(localAddr string, logger log.Logger) *ForwardingProxy {
 
 // NewMultiForwardingProxy creates a new dispatching TCPProxy, connections may go to
 // different backends based on localAddrMap.
-func NewMultiForwardingProxy(localAddrMap map[string]string, logger log.Logger) *ForwardingProxy {
+func NewMultiForwardingProxy(auth string, logger log.Logger) *ForwardingProxy {
 	if logger == nil {
 		logger = log.NewNopLogger()
 	}
+	user, pass, ok := parseAuth(auth)
+	if !ok {
+		user = ""
+		pass = ""
+	}
 
 	return &ForwardingProxy{
-		localAddrMap:        localAddrMap,
 		logger:              logger,
 		ForwardingHTTPProxy: NewReverseProxy(),
-		AuthUser:            "",
-		AuthPass:            "",
+		AuthUser:            user,
+		AuthPass:            pass,
 		DestDialTimeout:     10 * time.Second,
 		DestReadTimeout:     5 * time.Second,
 		DestWriteTimeout:    5 * time.Second,
@@ -112,7 +108,7 @@ func (p *ForwardingProxy) Proxy(w io.Writer, r io.ReadCloser, msg *proto.Control
 }
 
 func (p *ForwardingProxy) ServeHTTP(w http.ResponseWriter, r *http.Request, rr io.ReadCloser) {
-	p.logger.Log("Incoming request host", r.Host)
+	p.logger.Log("Incoming request host", r.Host, r.Header)
 	if p.AuthUser != "" && p.AuthPass != "" {
 		user, pass, ok := parseBasicProxyAuth(r.Header.Get("Proxy-Authorization"))
 		if !ok || user != p.AuthUser || pass != p.AuthPass {
@@ -181,12 +177,16 @@ func parseBasicProxyAuth(authz string) (username, password string, ok bool) {
 	if err != nil {
 		return
 	}
-	cs := string(c)
-	s := strings.IndexByte(cs, ':')
+
+	return parseAuth(string(c))
+}
+
+func parseAuth(a string) (username, password string, ok bool) {
+	s := strings.IndexByte(a, ':')
 	if s < 0 {
 		return
 	}
-	return cs[:s], cs[s+1:], true
+	return a[:s], a[s+1:], true
 }
 
 // NewReverseProxy retuns a new reverse proxy that takes an incoming
