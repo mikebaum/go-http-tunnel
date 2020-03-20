@@ -153,7 +153,10 @@ looks like this
       tls:
   	    proto: sni
   	    addr: localhost:443
-  	    host: tls.my-tunnel-host.com
+        host: tls.my-tunnel-host.com
+      forwardingproxy:
+        proto: httpconnect
+        remote_addr: 0.0.0.0:8443   
 ```
 
 Configuration options:
@@ -163,7 +166,7 @@ Configuration options:
 * `tls_key`: path to client TLS certificate key, *default:* `client.key` *in the config file directory*
 * `root_ca`: path to trusted root certificate authority pool file, if empty any server certificate is accepted
 *  `tunnels / [name]`
-    * `proto`: tunnel protocol, `http`, `tcp` or `sni`
+    * `proto`: tunnel protocol, `http`, `tcp`, `httpconnect` or `sni`
     * `addr`: forward traffic to this local port number or network address, for `proto=http` this can be full URL i.e. `https://machine/sub/path/?plus=params`, supports URL schemes `http` and `https`
     * `auth`: (`proto=http`) (optional) basic authentication credentials to enforce on tunneled requests, format `user:password`
     * `host`: (`proto=http`, `proto=sni`) hostname to request (requires reserved name and DNS CNAME)
@@ -180,6 +183,11 @@ Configuration options:
 
 \** Keep alive configuration not available for window since on windows it can only be either on or off.
 It is defaulted to on and cannot be turned off via configuration.
+
+```
+Use curl to test a httpconnect tunnel with proxy auth:
+curl --proxy-user testUser:testPass -x 127.0.0.1:8443 https://github.com
+```
 
 ## How it works
 
