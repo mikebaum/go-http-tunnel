@@ -184,6 +184,11 @@ Configuration options:
 \** Keep alive configuration not available for window since on windows it can only be either on or off.
 It is defaulted to on and cannot be turned off via configuration.
 
+```
+Use curl to test a httpconnect tunnel with proxy auth:
+curl --proxy-user testUser:testPass -x 127.0.0.1:8443 https://github.com
+```
+
 ## How it works
 
 A client opens TLS connection to a server. The server accepts connections from known clients only. The client is recognized by its TLS certificate ID. The server is publicly available and proxies incoming connections to the client. Then the connection is further proxied in the client's network.
