@@ -6,10 +6,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/mmatczuk/go-http-tunnel/keepalive"
 	"io/ioutil"
 	"path/filepath"
 	"time"
+
+	"github.com/mmatczuk/go-http-tunnel/keepalive"
 
 	"gopkg.in/yaml.v2"
 
@@ -164,9 +165,6 @@ func validateHttpConnect(t *Tunnel) error {
 	}
 	if t.Host != "" {
 		return fmt.Errorf("host: unexpected")
-	}
-	if t.Auth != "" {
-		return fmt.Errorf("auth: unexpected")
 	}
 
 	return nil

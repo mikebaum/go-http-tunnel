@@ -8,12 +8,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
 	"sort"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/cenkalti/backoff"
 	tunnel "github.com/mmatczuk/go-http-tunnel"
@@ -176,7 +177,7 @@ func tunnels(m map[string]*Tunnel) map[string]*proto.Tunnel {
 func proxy(m map[string]*Tunnel, logger log.Logger) tunnel.ProxyFunc {
 	httpURL := make(map[string]*url.URL)
 	tcpAddr := make(map[string]string)
-	forwardAddr := make(map[string]string)
+	var forwardAuth string
 	for _, t := range m {
 		fmt.Println("Protocol", t.Protocol)
 		switch t.Protocol {
@@ -189,7 +190,7 @@ func proxy(m map[string]*Tunnel, logger log.Logger) tunnel.ProxyFunc {
 		case proto.TCP, proto.TCP4, proto.TCP6:
 			tcpAddr[t.RemoteAddr] = t.Addr
 		case proto.HTTPCONNECT:
-			forwardAddr[t.RemoteAddr] = t.RemoteAddr
+			forwardAuth = t.Auth
 		case proto.SNI:
 			tcpAddr[t.Host] = t.Addr
 		}
@@ -198,7 +199,7 @@ func proxy(m map[string]*Tunnel, logger log.Logger) tunnel.ProxyFunc {
 	return tunnel.Proxy(tunnel.ProxyFuncs{
 		HTTP:        tunnel.NewMultiHTTPProxy(httpURL, log.NewContext(logger).WithPrefix("proxy", "HTTP")).Proxy,
 		TCP:         tunnel.NewMultiTCPProxy(tcpAddr, log.NewContext(logger).WithPrefix("proxy", "TCP")).Proxy,
-		HTTPCONNECT: tunnel.NewMultiForwardingProxy(forwardAddr, log.NewContext(logger).WithPrefix("proxy", "FORWAD")).Proxy,
+		HTTPCONNECT: tunnel.NewMultiForwardingProxy(forwardAuth, log.NewContext(logger).WithPrefix("proxy", "FORWAD")).Proxy,
 	})
 }
 
